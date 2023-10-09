@@ -116,6 +116,15 @@ impl<S: HasStateApi, T: IsTokenId + Copy, A: IsTokenAmount + Copy + ops::Sub<Out
         );
     }
 
+    pub(crate) fn remove_token_from(&mut self, token_info: TokenInfo<T>, owner: &AccountAddress) {
+        let token_owner = TokenOwnerInfo::from(token_info, owner);
+
+        match self.token_prices.get(&token_owner) {
+            Some(_) => self.token_prices.remove(&token_owner),
+            None => (),
+        }
+    }
+
     pub(crate) fn decrease_listed_quantity(&mut self, token_info: &TokenOwnerInfo<T>, delta: A) {
         if let Some(mut price) = self.token_prices.get_mut(token_info) {
             price.quantity = price.quantity - delta;

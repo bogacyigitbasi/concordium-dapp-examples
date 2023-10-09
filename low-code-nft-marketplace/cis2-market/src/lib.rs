@@ -10,16 +10,19 @@
 //! This code has not been checked for production readiness. Please use for
 //! reference purposes
 mod errors;
+mod events;
 mod params;
 mod state;
 
+use crate::events::TokenDelistedEvent;
+use crate::{params::TransferParams, state::TokenOwnerInfo};
 use concordium_cis2::*;
 use concordium_std::*;
 use errors::MarketplaceError;
-use params::{AddParams, InitParams, TokenList};
-use state::{Commission, State, TokenInfo, TokenListItem, TokenRoyaltyState};
 
-use crate::{params::TransferParams, state::TokenOwnerInfo};
+use events::MarketplaceEvent;
+use params::{AddParams, InitParams, RemoveParams, TokenList};
+use state::{Commission, State, TokenInfo, TokenListItem, TokenRoyaltyState};
 
 type ContractResult<A> = Result<A, MarketplaceError>;
 
@@ -106,6 +109,49 @@ fn add<S: HasStateApi>(
     );
 
     Ok(())
+}
+
+#[warn(unused_must_use)]
+#[receive(
+    contract = "Market-NFT",
+    name = "remove",
+    parameter = "RemoveParams",
+    enable_logger,
+    mutable
+)]
+fn remove<S: HasStateApi>(
+    ctx: &impl HasReceiveContext,
+    host: &mut impl HasHost<ContractState<S>, StateApiType = S>,
+    logger: &mut impl HasLogger,
+) -> ContractResult<()> {
+    // Get the contract owner
+    let owner = ctx.owner();
+    // Get the sender of the transaction
+    let sender = ctx.sender();
+
+    ensure!(
+        sender.matches_account(&owner),
+        MarketplaceError::Unauthorized
+    );
+
+    let params: RemoveParams = ctx
+        .parameter_cursor()
+        .get()
+        .map_err(|_e| MarketplaceError::ParseParams)?;
+
+    let token_info = TokenInfo {
+        id: params.token_id,
+        address: params.nft_contract_address,
+    };
+
+    host.state_mut()
+        .remove_token_from(token_info, &params.owner);
+
+    logger.log(&MarketplaceEvent::Delist::<_>(TokenDelistedEvent {
+        token_id: params.token_id,
+        address: params.nft_contract_address,
+    }))?;
+    ContractResult::Ok(())
 }
 
 /// Allows for transferring the token specified by TransferParams.

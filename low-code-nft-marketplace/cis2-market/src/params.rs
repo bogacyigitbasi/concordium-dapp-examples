@@ -45,6 +45,13 @@ pub(crate) struct TransferParams {
     pub quantity: ContractTokenAmount,
 }
 
+#[derive(Serial, Deserial, SchemaType)]
+pub(crate) struct RemoveParams {
+    pub nft_contract_address: ContractAddress,
+    pub token_id: ContractTokenId,
+    pub owner: AccountAddress,
+}
+
 #[derive(Debug, Serialize, SchemaType)]
 pub struct TokenList(
     #[concordium(size_length = 2)] pub Vec<TokenListItem<ContractTokenId, ContractTokenAmount>>,

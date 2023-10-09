@@ -17,4 +17,17 @@ pub enum MarketplaceError {
     InvalidCommission,
     InvalidTokenQuantity,
     InvalidRoyalty,
+    Unauthorized,
+    LogFull,
+    LogMalformed,
+}
+
+/// Mapping the logging errors to ContractError.
+impl From<LogError> for MarketplaceError {
+    fn from(le: LogError) -> Self {
+        match le {
+            LogError::Full => Self::LogFull,
+            LogError::Malformed => Self::LogMalformed,
+        }
+    }
 }
